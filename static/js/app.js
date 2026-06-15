@@ -19,6 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const skeletonLoader = document.getElementById('skeleton-loader');
     const emptyState = document.getElementById('empty-state');
     const resetFiltersBtn = document.getElementById('reset-filters-btn');
+    const themeToggle = document.getElementById('theme-toggle');
+    const exportBtn = document.getElementById('export-btn');
 
     // Sidebar DOM Elements
     const composerSidebar = document.getElementById('composer-sidebar');
@@ -230,18 +232,36 @@ document.addEventListener('DOMContentLoaded', () => {
                             <polyline points="7 7 17 7 17 17"></polyline>
                         </svg>
                     </a>
-                    <button class="card-tweet-btn" aria-label="Share this update on X" stop-propagation>
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                        </svg>
-                    </button>
+                    <div class="card-actions-wrapper">
+                        <button class="card-copy-btn" aria-label="Copy description to clipboard" stop-propagation>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
+                        <button class="card-tweet-btn" aria-label="Share this update on X" stop-propagation>
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             `;
 
-            // Prevent link and tweet button click from triggering card selection
+            // Prevent link and actions click from triggering card selection
             card.querySelectorAll('[stop-propagation]').forEach(elem => {
                 elem.addEventListener('click', (e) => {
                     e.stopPropagation();
+                });
+            });
+
+            // Copy button click handler on card
+            card.querySelector('.card-copy-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(update.text).then(() => {
+                    showToast('Copied description to clipboard!', 'success');
+                }).catch(err => {
+                    showToast('Failed to copy text', 'error');
                 });
             });
 
@@ -427,6 +447,80 @@ document.addEventListener('DOMContentLoaded', () => {
         window.open(shareUrl, '_blank', 'noopener,noreferrer');
         showToast('Redirected to X (Twitter) share page!', 'success');
     });
+
+    // Export to CSV logic (exports currently filtered releases)
+    function exportToCSV() {
+        const filtered = parsedUpdates.filter(update => {
+            const matchesFilter = activeFilter === 'all' || update.type === activeFilter;
+            const matchesSearch = searchQuery === '' || 
+                update.text.toLowerCase().includes(searchQuery) ||
+                update.date.toLowerCase().includes(searchQuery) ||
+                update.type.toLowerCase().includes(searchQuery);
+            return matchesFilter && matchesSearch;
+        });
+
+        if (filtered.length === 0) {
+            showToast('No updates to export', 'warning');
+            return;
+        }
+
+        // Build CSV String (respecting comma/quote escaping)
+        let csvContent = "\uFEFF"; // UTF-8 BOM to support Excel encoding
+        csvContent += "Date,Type,Description,Documentation Link\n";
+
+        filtered.forEach(update => {
+            const escapedDate = `"${update.date.replace(/"/g, '""')}"`;
+            const escapedType = `"${update.type.replace(/"/g, '""')}"`;
+            // Normalize newlines in description to spaces so CSV doesn't break
+            const escapedText = `"${update.text.replace(/\r?\n|\r/g, ' ').replace(/"/g, '""')}"`;
+            const escapedLink = `"${update.link.replace(/"/g, '""')}"`;
+            
+            csvContent += `${escapedDate},${escapedType},${escapedText},${escapedLink}\n`;
+        });
+
+        // Download CSV as Blob
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute("href", url);
+        const filterSuffix = activeFilter !== 'all' ? `_${activeFilter}` : '';
+        link.setAttribute("download", `bigquery_releases${filterSuffix}_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('CSV file exported successfully!', 'success');
+    }
+
+    // Theme Switching Controller
+    function initTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        if (savedTheme === 'light') {
+            document.body.classList.add('light-theme');
+            themeToggle.checked = true;
+        } else {
+            document.body.classList.remove('light-theme');
+            themeToggle.checked = false;
+        }
+    }
+
+    themeToggle.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            document.body.classList.add('light-theme');
+            localStorage.setItem('theme', 'light');
+            showToast('Switched to Light Mode', 'info');
+        } else {
+            document.body.classList.remove('light-theme');
+            localStorage.setItem('theme', 'dark');
+            showToast('Switched to Dark Mode', 'info');
+        }
+    });
+
+    exportBtn.addEventListener('click', exportToCSV);
+
+    // Initialize Theme
+    initTheme();
 
     // Initial Load
     fetchReleases();
