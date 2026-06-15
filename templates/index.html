@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigQuery Release Hub</title>
+    <meta name="description" content="Browse, search, and share Google BigQuery release notes instantly with styled cards, smart filtering, and Twitter integration.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="app-header">
+                <div class="brand">
+                    <div class="logo-wrapper">
+                        <!-- BigQuery/GCP styled logo -->
+                        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM9 17H7V10H9V17ZM13 17H11V7H13V17ZM17 17H15V13H17V17Z" fill="url(#logo-grad)"/>
+                            <defs>
+                                <linearGradient id="logo-grad" x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#4285F4"/>
+                                    <stop offset="1" stop-color="#A142F4"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <div class="brand-text">
+                        <h1>BigQuery Release Hub</h1>
+                        <p class="subtitle">Track and share the latest Google BigQuery insights</p>
+                    </div>
+                </div>
+                
+                <div class="header-actions">
+                    <span id="cache-time" class="cache-time-label">Not loaded yet</span>
+                    <button id="refresh-btn" class="btn btn-primary btn-iconic" aria-label="Refresh release notes">
+                        <svg class="icon sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                        </svg>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Filters & Search Section -->
+            <section class="controls-section" aria-label="Filters and search">
+                <div class="search-bar-wrapper">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="search-input" placeholder="Search updates (e.g. storage, json, console)..." aria-label="Search updates">
+                    <button id="clear-search" class="clear-btn" aria-label="Clear search" style="display: none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="filters-container">
+                    <span class="filters-label">Filter:</span>
+                    <div class="chips-group" id="filter-chips">
+                        <button class="chip active" data-type="all">All Updates</button>
+                        <button class="chip" data-type="Feature">Features</button>
+                        <button class="chip" data-type="Change">Changes</button>
+                        <button class="chip" data-type="Deprecated">Deprecations</button>
+                        <button class="chip" data-type="Bug Fix">Bug Fixes</button>
+                        <button class="chip" data-type="General">General</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Grid Content -->
+            <section class="feed-section">
+                <!-- Skeleton Loader -->
+                <div id="skeleton-loader" class="feed-grid">
+                    <div class="skeleton-card">
+                        <div class="skeleton-header">
+                            <div class="skeleton-pill"></div>
+                            <div class="skeleton-date"></div>
+                        </div>
+                        <div class="skeleton-body">
+                            <div class="skeleton-line"></div>
+                            <div class="skeleton-line short"></div>
+                        </div>
+                        <div class="skeleton-footer"></div>
+                    </div>
+                    <div class="skeleton-card">
+                        <div class="skeleton-header">
+                            <div class="skeleton-pill"></div>
+                            <div class="skeleton-date"></div>
+                        </div>
+                        <div class="skeleton-body">
+                            <div class="skeleton-line"></div>
+                            <div class="skeleton-line short"></div>
+                        </div>
+                        <div class="skeleton-footer"></div>
+                    </div>
+                    <div class="skeleton-card">
+                        <div class="skeleton-header">
+                            <div class="skeleton-pill"></div>
+                            <div class="skeleton-date"></div>
+                        </div>
+                        <div class="skeleton-body">
+                            <div class="skeleton-line"></div>
+                            <div class="skeleton-line short"></div>
+                        </div>
+                        <div class="skeleton-footer"></div>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="empty-state" style="display: none;">
+                    <div class="empty-icon-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="8" y1="12" x2="16" y2="12"></line>
+                        </svg>
+                    </div>
+                    <h3>No releases found</h3>
+                    <p>Try resetting filters or changing your search terms.</p>
+                    <button id="reset-filters-btn" class="btn btn-secondary">Reset Filters</button>
+                </div>
+
+                <!-- Feed Grid -->
+                <div id="releases-grid" class="feed-grid" style="display: none;">
+                    <!-- Dynamically populated -->
+                </div>
+            </section>
+        </main>
+
+        <!-- Sidebar: Tweet Composer Panel -->
+        <aside class="composer-sidebar" id="composer-sidebar" aria-label="Tweet composer">
+            <div class="sidebar-header">
+                <h2>Share on X (Twitter)</h2>
+                <button id="close-composer" class="close-sidebar-btn" aria-label="Close composer">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="sidebar-body">
+                <div class="selected-release-preview">
+                    <span class="preview-label">Selected Release:</span>
+                    <div id="preview-meta" class="preview-meta">
+                        <span id="preview-badge" class="type-badge">Feature</span>
+                        <span id="preview-date" class="date-label">June 15, 2026</span>
+                    </div>
+                    <div id="preview-text-content" class="preview-text-content">
+                        <!-- Brief text summary -->
+                    </div>
+                </div>
+
+                <div class="composer-form">
+                    <label for="tweet-textarea" class="textarea-label">Tweet text</label>
+                    <div class="textarea-wrapper">
+                        <textarea id="tweet-textarea" rows="8" maxlength="280" placeholder="What's happening?"></textarea>
+                        <div class="textarea-decorations">
+                            <span id="char-counter" class="char-counter">0 / 280</span>
+                        </div>
+                    </div>
+
+                    <div class="tweet-options">
+                        <div class="option-toggle">
+                            <input type="checkbox" id="opt-tags" checked>
+                            <label for="opt-tags">Include tags (#BigQuery, etc.)</label>
+                        </div>
+                        <div class="option-toggle">
+                            <input type="checkbox" id="opt-link" checked>
+                            <label for="opt-link">Include official link</label>
+                        </div>
+                    </div>
+
+                    <button id="tweet-submit-btn" class="btn btn-x-twitter">
+                        <!-- Custom SVG for X / Twitter logo -->
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                        <span>Tweet Update</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
