@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedUpdate = null;
     let activeFilter = 'all';
     let searchQuery = '';
+    let lastFetchedTimestamp = null;
 
     // DOM Elements
     const refreshBtn = document.getElementById('refresh-btn');
@@ -51,6 +52,25 @@ document.addEventListener('DOMContentLoaded', () => {
         if (type.includes('change') || type.includes('chang')) return 'Change';
         if (type.includes('notice') || type.includes('announc')) return 'Notice';
         return 'General';
+    }
+
+    // Live Relative Timestamps Update
+    function updateRelativeTime() {
+        if (!lastFetchedTimestamp) return;
+        const now = Math.floor(Date.now() / 1000);
+        const diff = now - lastFetchedTimestamp;
+        
+        if (diff < 30) {
+            cacheTimeLabel.textContent = "Updated: Just now";
+        } else if (diff < 60) {
+            cacheTimeLabel.textContent = `Updated: ${diff}s ago`;
+        } else if (diff < 3600) {
+            const mins = Math.floor(diff / 60);
+            cacheTimeLabel.textContent = `Updated: ${mins}m ago`;
+        } else {
+            const hours = Math.floor(diff / 3600);
+            cacheTimeLabel.textContent = `Updated: ${hours}h ago`;
+        }
     }
 
     // Helper: Toast Notifications
@@ -161,8 +181,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Set Cache Last Updated time
             if (data.cached_at) {
-                const date = new Date(data.cached_at * 1000);
-                cacheTimeLabel.textContent = `Updated: ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                lastFetchedTimestamp = data.cached_at;
+                updateRelativeTime();
             }
 
             renderGrid();
@@ -208,8 +228,30 @@ document.addEventListener('DOMContentLoaded', () => {
         filtered.forEach(update => {
             const isSelected = selectedUpdate && selectedUpdate.id === update.id;
             const card = document.createElement('div');
-            card.className = `release-card ${isSelected ? 'selected' : ''}`;
+            
+            // Set keyboard focusability and hover coloring classes
+            card.setAttribute('tabindex', '0');
+            const typeClass = update.type.toLowerCase().replace(' ', '');
+            card.className = `release-card ${typeClass}-hover ${isSelected ? 'selected' : ''}`;
             card.dataset.id = update.id;
+            
+            // Check if content is long to make it collapsible
+            const isLongDescription = update.text.length > 400;
+            const bodyHtml = isLongDescription ? `
+                <div class="expandable-content collapsed" stop-propagation>
+                    ${update.html}
+                </div>
+                <button class="read-more-btn" stop-propagation aria-label="Toggle full description">
+                    <span>Read more</span>
+                    <svg class="read-more-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;transition:transform var(--transition-fast)">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+            ` : `
+                <div class="card-body-content">
+                    ${update.html}
+                </div>
+            `;
             
             card.innerHTML = `
                 <div class="select-indicator">
@@ -218,11 +260,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     </svg>
                 </div>
                 <div class="card-header">
-                    <span class="type-badge ${update.type.toLowerCase().replace(' ', '')}">${update.type}</span>
+                    <span class="type-badge ${typeClass}">${update.type}</span>
                     <span class="date-label">${update.date}</span>
                 </div>
                 <div class="card-body">
-                    ${update.html}
+                    ${bodyHtml}
                 </div>
                 <div class="card-footer">
                     <a href="${update.link}" target="_blank" rel="noopener noreferrer" class="learn-more-link" stop-propagation>
@@ -255,6 +297,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
+            // Read more toggle handler
+            if (isLongDescription) {
+                const readMoreBtn = card.querySelector('.read-more-btn');
+                readMoreBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const content = card.querySelector('.expandable-content');
+                    const isCollapsed = content.classList.toggle('collapsed');
+                    
+                    const chevron = readMoreBtn.querySelector('.read-more-chevron');
+                    if (isCollapsed) {
+                        chevron.style.transform = 'rotate(0deg)';
+                        readMoreBtn.querySelector('span').textContent = 'Read more';
+                    } else {
+                        chevron.style.transform = 'rotate(180deg)';
+                        readMoreBtn.querySelector('span').textContent = 'Read less';
+                    }
+                });
+            }
+
             // Copy button click handler on card
             card.querySelector('.card-copy-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -277,6 +338,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     deselectAll();
                 } else {
                     selectUpdate(update);
+                }
+            });
+
+            // Keyboard navigation (Enter / Space key presses select the card)
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (selectedUpdate && selectedUpdate.id === update.id) {
+                        deselectAll();
+                    } else {
+                        selectUpdate(update);
+                    }
                 }
             });
 
@@ -368,6 +441,13 @@ document.addEventListener('DOMContentLoaded', () => {
             charCounter.classList.add('warning');
         } else if (length > 280) {
             charCounter.classList.add('danger');
+        }
+
+        // Disable submit button if character count exceeds limit
+        if (length > 280) {
+            tweetSubmitBtn.disabled = true;
+        } else {
+            tweetSubmitBtn.disabled = false;
         }
     }
 
@@ -490,7 +570,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        showToast('CSV file exported successfully!', 'success');
+        showToast(`Successfully exported ${filtered.length} updates to CSV!`, 'success');
     }
 
     // Theme Switching Controller
@@ -518,6 +598,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     exportBtn.addEventListener('click', exportToCSV);
+
+    // Global keyboard hotkeys: '/' to focus search, 'Escape' to close composer
+    document.addEventListener('keydown', (e) => {
+        if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            searchInput.focus();
+        }
+        if (e.key === 'Escape') {
+            deselectAll();
+        }
+    });
+
+    // Run relative time updates every 30 seconds
+    setInterval(updateRelativeTime, 30000);
 
     // Initialize Theme
     initTheme();

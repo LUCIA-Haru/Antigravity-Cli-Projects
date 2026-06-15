@@ -1040,6 +1040,90 @@ body.light-theme .sun-icon {
     }
 }
 
+/* Accessibility Focus States */
+.release-card:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* Card Specific Hover Accent Colors */
+.release-card.feature-hover:hover {
+    border-color: var(--color-feature);
+    box-shadow: 0 10px 25px rgba(0, 230, 118, 0.15);
+}
+
+.release-card.bugfix-hover:hover {
+    border-color: var(--color-bugfix);
+    box-shadow: 0 10px 25px rgba(0, 176, 255, 0.15);
+}
+
+.release-card.deprecated-hover:hover {
+    border-color: var(--color-deprecated);
+    box-shadow: 0 10px 25px rgba(255, 23, 68, 0.15);
+}
+
+.release-card.change-hover:hover {
+    border-color: var(--color-change);
+    box-shadow: 0 10px 25px rgba(255, 179, 0, 0.15);
+}
+
+.release-card.general-hover:hover {
+    border-color: var(--text-muted);
+    box-shadow: 0 10px 25px rgba(176, 190, 197, 0.15);
+}
+
+/* Collapsible Content / Show More Toggle */
+.expandable-content {
+    transition: max-height var(--transition-normal) ease-out;
+}
+
+.expandable-content.collapsed {
+    max-height: 120px;
+    overflow: hidden;
+    position: relative;
+}
+
+.expandable-content.collapsed::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(to bottom, transparent, var(--bg-card));
+    pointer-events: none;
+    transition: background var(--transition-fast);
+}
+
+.read-more-btn {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    margin-top: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0;
+    transition: color var(--transition-fast);
+}
+
+.read-more-btn:hover {
+    color: var(--color-secondary);
+}
+
+/* X / Twitter Button Disabled State */
+.btn-x-twitter:disabled {
+    background-color: var(--border-color);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.6;
+}
+
 /* Responsive adjustments */
 @media (max-width: 1024px) {
     .app-container {
